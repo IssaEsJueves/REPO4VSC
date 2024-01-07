@@ -5,14 +5,21 @@ import numpy as np
 from PIL import ImageGrab, ImageOps, Image
 from skimage.color import rgb2lab
 
+#rescaled resolution of image
 resized_width = 200
 resized_height = 100
+#rate in which it takes and analyzes screenshot
 rate = .001
+#how long without a flag does it reset the counters
 timeout_var = .5
+#the threshold percentage the lower the percentage, the higher risk for false flags
 rgb_threshold_percentage = 1000
 luminance_threshold_percentage = 70
+#how many consecutive flagged frames before the gui is fullscreened
 lum_consecutive_frames = 3
 rgb_consecutive_frames = 3
+#cooldown after a flag before it begins to detect
+cooldown = 3
 
 
 class EpilepsyMonitor:
@@ -95,6 +102,7 @@ class EpilepsyMonitor:
                     self.luminance_change_count = 0
                     self.rgb_change_count = 0
 
+
                 if (
                         self.luminance_change_count >= self.lum_consecutive_frames
                 ):
@@ -176,7 +184,7 @@ class EpilepsyMonitor:
         self.root.focus_force()
         self.luminance_change_count = 0
         self.rgb_change_count = 0
-        time.sleep(3)
+        time.sleep(cooldown)
 
     def resume_screen(self):
         self.label.config(text="Strange light activity detected, click to disregard", bg="#333333")
