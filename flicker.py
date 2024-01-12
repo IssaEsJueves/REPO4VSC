@@ -1,73 +1,79 @@
-import tkinter as tk
+import customtkinter as ctk
 import threading
 import time
 import numpy as np
-from PIL import ImageGrab, ImageOps, Image
+from PIL import ImageGrab, ImageOps
+from PIL import Image
 from skimage.color import rgb2lab
 
-#rescaled resolution of image
-resized_width = 200
-resized_height = 100
-#rate in which it takes and analyzes screenshot
-rate = .001
-#how long without a flag does it reset the counters
-timeout_var = .5
-#the threshold percentage the lower the percentage, the higher risk for false flags
-rgb_threshold_percentage = 1000
-luminance_threshold_percentage = 70
-#how many consecutive flagged frames before the gui is fullscreened
-lum_consecutive_frames = 3
-rgb_consecutive_frames = 3
-#cooldown after a flag before it begins to detect
-cooldown = 3
+
+class Configuration:
+    # Rescaled resolution of the image
+    resized_width = 200
+    resized_height = 100
+
+    # Rate at which it takes and analyzes a screenshot
+    rate = 0.001
+
+    # How long without a flag does it reset the counters
+    timeout_var = 0.25
+
+    # The threshold percentage; the lower the percentage, the higher the risk for false flags
+    rgb_threshold_percentage = 1000
+    luminance_threshold_percentage = 70
+
+    # How many consecutive flagged frames before the GUI is full-screened
+    lum_consecutive_frames = 3
+    rgb_consecutive_frames = 3
 
 
 class EpilepsyMonitor:
+    # creating the GUI
     def __init__(self):
         self.paused = False
-        self.root = tk.Tk()
+        self.root = ctk.CTk()
         self.root.title("Epilepsy Monitor")
-        self.root.geometry("0x0")
+        # self.root.configure(background=ctk.ThemeManager.theme["Blue"]["frame_low"])
         self.root.resizable(False, False)
 
-        font = ("Helvetica", 14)
-        label_color = "#333333"
-        button_color = "#4CAF50"
-        button_text_color = "white"
+        font = ("Impact", 20)  # "bold")
 
-        self.label = tk.Label(
+        self.label = ctk.CTkLabel(
             self.root,
-            text="Strange light activity detected, click to disregard",
-            font=font,
-            bg=label_color,
-            fg="white",
-            padx=20,
-            pady=20,
+            text="Strange light activity detected,\nclick to disregard",
+            font=font,  # Using text_font instead of font for customtkinter
+            # fg_color=ctk.ThemeManager.theme["Blue"]["frame_high"],  # Text color
+            #  bg_color=ctk.ThemeManager.theme["Blue"]["frame_low"],  # Background color
+            width=380,  # Adjust the width to fit the window
+            height=60,  # Adjust the height for better visual
+            corner_radius=10  # Rounded corners for a modern look
         )
-        self.label.pack(fill=tk.BOTH)
-
-        self.ok_button = tk.Button(
+        self.label.pack(pady=20)  # Add some vertical padding for spacing
+        self.ok_button = ctk.CTkButton(
             self.root,
-            text="Okay",
-            font=font,
-            bg=button_color,
-            fg=button_text_color,
-            padx=10,
-            pady=5,
+            text="Disregard",
+            font=font,  # Using text_font instead of font for customtkinter
+            # fg_color=ctk.ThemeManager.theme["Blue"]["button"],  # Text color
+            # bg_color=ctk.ThemeManager.theme["Blue"]["button"],  # Background color
+            # hover_color=ctk.ThemeManager.theme["Blue"]["button_hover"],  # Hover color
+            width=180,  # Width of the button
+            height=50,  # Height of the button
+            corner_radius=10,  # Rounded corners for the button
             command=self.resume_screen
         )
-        self.ok_button.pack(pady=10)
+        self.ok_button.pack(pady=20)  # Add some vertical padding for spacing
 
+        # local call to variables
         self.last_luminance = None
         self.last_rgb_frame = None
         self.luminance_change_count = 0
         self.rgb_change_count = 0
-        self.rgb_threshold_percentage = rgb_threshold_percentage
-        self.luminance_threshold_percentage = luminance_threshold_percentage
-        self.lum_consecutive_frames = lum_consecutive_frames
-        self.rgb_consecutive_frames = rgb_consecutive_frames
+        self.rgb_threshold_percentage = Configuration.rgb_threshold_percentage
+        self.luminance_threshold_percentage = Configuration.luminance_threshold_percentage
+        self.lum_consecutive_frames = Configuration.lum_consecutive_frames
+        self.rgb_consecutive_frames = Configuration.rgb_consecutive_frames
         self.timeout_start = time.time()
-        self.timeout_duration = timeout_var
+        self.timeout_duration = Configuration.timeout_var
 
         self.alert_shown = False
 
@@ -77,6 +83,7 @@ class EpilepsyMonitor:
 
     def start_monitor_thread(self):
         self.monitor_thread = threading.Thread(target=self.monitor_screen)
+        self.root.withdraw()
         self.monitor_thread.start()
 
     def monitor_screen(self):
@@ -84,8 +91,8 @@ class EpilepsyMonitor:
         while True:
             if not self.paused:
                 screenshot = ImageGrab.grab(bbox=(0, 0, 1920, 1080))
-                screenshot = screenshot.resize((resized_width, resized_height), Image.LANCZOS)
-                current_rgb_frame = screenshot.convert("RGB")
+                screenshot = screenshot.resize((Configuration.resized_width, Configuration.resized_height),
+                                               Image.LANCZOS)
                 current_luminance, luminance_percentage_change = self.calculate_luminance(screenshot)
                 rgb_percentage_change, _ = self.calculate_rgb_change(screenshot)
                 self.last_luminance = current_luminance
@@ -96,17 +103,16 @@ class EpilepsyMonitor:
                         self.rgb_change_count >= self.rgb_consecutive_frames
 
                 ):
-                    self.label.config(text="Strange light activity detected, click to disregard - RGB", bg="#333333")
+                    self.label.configure(text="Strange light activity detected, click to disregard - RGB")
                     self.pause_screen()
                     # Reset the change counts
                     self.luminance_change_count = 0
                     self.rgb_change_count = 0
 
-
                 if (
                         self.luminance_change_count >= self.lum_consecutive_frames
                 ):
-                    self.label.config(text="Strange light activity detected, click to disregard - LUM", bg="#333333")
+                    self.label.configure(text="Strange light activity detected, click to disregard - LUM")
                     self.pause_screen()
                     # Reset the change counts
                     self.luminance_change_count = 0
@@ -126,7 +132,7 @@ class EpilepsyMonitor:
                     self.luminance_change_count = 0
                     self.rgb_change_count = 0
 
-                time.sleep(rate)
+                time.sleep(Configuration.rate)
 
     def calculate_luminance(self, image):
         grayscale_image = ImageOps.grayscale(image)
@@ -176,18 +182,16 @@ class EpilepsyMonitor:
     def pause_screen(self):
         self.minimize_all_windows()
         self.paused = True
-        self.root.attributes("-fullscreen", True)
+        self.root.overrideredirect(True)
         self.root.attributes("-topmost", True)
-        self.root.geometry("{0}x{1}+0+0".format(self.root.winfo_screenwidth(), self.root.winfo_screenheight()))
+        self.root.geometry(f'{700}x{200}+{620}+{300}')
         self.root.deiconify()
-        self.root.lift()
         self.root.focus_force()
-        self.luminance_change_count = 0
-        self.rgb_change_count = 0
-        time.sleep(cooldown)
+        self.resume_event = threading.Event()
+        self.resume_event.wait()
 
     def resume_screen(self):
-        self.label.config(text="Strange light activity detected, click to disregard", bg="#333333")
+        self.label.configure(text="Strange light activity detected, click to disregard")
         self.paused = False
         self.alert_shown = False
         self.root.attributes("-fullscreen", False)
@@ -195,8 +199,10 @@ class EpilepsyMonitor:
         print("Okay button clicked")
         self.luminance_change_count = 0
         self.rgb_change_count = 0
+        self.resume_event.set()
 
-    def minimize_all_windows(self):
+    @staticmethod
+    def minimize_all_windows():
         try:
             import pyautogui
             pyautogui.hotkey('win', 'd')
